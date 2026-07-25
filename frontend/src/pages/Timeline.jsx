@@ -1,0 +1,31 @@
+import { useEffect, useState } from "react";
+import TimelineCard from "../components/timeline/TimelineCard.jsx";
+import { getTimelineEvents } from "../services/timelineService.js";
+
+function Timeline() {
+  const [events, setEvents] = useState([]);
+
+  useEffect(() => {
+    getTimelineEvents().then((res) => setEvents(res.events));
+  }, []);
+
+  return (
+    <div className="mx-auto max-w-3xl">
+      <div className="mb-7">
+        <p className="label-eyebrow">Step 4 of 6</p>
+        <h2 className="mt-1 font-display text-2xl font-semibold text-ink-800">Medical Timeline</h2>
+        <p className="mt-1.5 text-sm text-ink-500">
+          A chronological view of your visits, diagnoses, and treatments.
+        </p>
+      </div>
+
+      <div>
+        {events.map((event, idx) => (
+          <TimelineCard key={event.id} event={event} isLast={idx === events.length - 1} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default Timeline;
