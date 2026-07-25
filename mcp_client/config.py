@@ -5,7 +5,7 @@ class MCPConfig(BaseSettings):
     Validates and loads environment configurations for the MCP Client.
     """
     MCP_SERVER_URL: str = "http://localhost:8000/sse"
-    REQUEST_TIMEOUT: float = 30.0
+    MCP_TIMEOUT: float = 60.0
     DEBUG: bool = False
 
     model_config = SettingsConfigDict(

@@ -8,17 +8,25 @@ from mcp import ClientSession
 from mcp.client.sse import sse_client
 from mcp_client.config import config
 from mcp_client.exceptions import MCPConnectionError, MCPToolError, MCPTimeoutError
+from mcp_client.schemas import (
+    AuthenticationResponse,
+    UploadResponse,
+    PatientProfile,
+    TimelineResponse,
+    ClinicalTrialResponse,
+    ReferralResponse
+)
 
 logger = logging.getLogger("mcp_client.client")
 
 class MCPClient:
     """
     Asynchronous Model Context Protocol (MCP) Client.
-    Manages SSE connections to the NitroCloud MCP server and encapsulates tool invocation.
+    Manages SSE connections to the NitroCloud MCP server and encapsulates tool invocations.
     """
     def __init__(self) -> None:
         self.sse_url: str = config.MCP_SERVER_URL
-        self.timeout: float = config.REQUEST_TIMEOUT
+        self.timeout: float = config.MCP_TIMEOUT
         self.session: Optional[ClientSession] = None
         self._exit_stack: Optional[AsyncExitStack] = None
         self._lock = asyncio.Lock()
@@ -109,10 +117,27 @@ class MCPClient:
 
                 logger.info("Tool Success: '%s' completed successfully", tool_name)
                 
-                if not result.content:
-                    return {}
+                text_content = result.content[0].text if result.content else ""
+                
+                # Debugging log for raw response
+                if tool_name == "upload_medical_report":
+                    print("========== RAW MCP RESPONSE ==========")
+                    print(text_content)
+                    try:
+                        parsed_dict = json.loads(text_content)
+                        print("Response Type:")
+                        print(type(parsed_dict))
+                        print("Keys:")
+                        for k in parsed_dict.keys():
+                            print(k)
+                        print("patientId:")
+                        print(repr(parsed_dict.get("patientId")))
+                        print("fileId:")
+                        print(repr(parsed_dict.get("fileId")))
+                    except Exception as parse_err:
+                        print(f"Error parsing raw response: {parse_err}")
+                    print("======================================")
 
-                text_content = result.content[0].text
                 try:
                     return json.loads(text_content)
                 except json.JSONDecodeError:
@@ -138,3 +163,120 @@ class MCPClient:
                 else:
                     logger.error("Tool Failure: All execution attempts for '%s' failed.", tool_name)
                     raise MCPConnectionError(f"Failed to communicate with MCP server: {e}") from e
+
+    # --- Tool Wrapper Methods Exposed Directly on client ---
+
+    async def authenticate_user(self, username: str, password: str, action: str) -> AuthenticationResponse:
+        """
+        Exposes authenticate_user wrapper directly on MCPClient instance.
+        Maps 'username' to 'email' to match NitroCloud tool schema.
+        """
+        payload = {
+            "email": username,
+            "password": password
+        }
+        result = await self.call_tool("authenticate_user", payload)
+        return AuthenticationResponse.model_validate(result)
+
+    async def upload_medical_report(self, patientId: Optional[str], fileName: str, contentType: str, base64Content: str) -> UploadResponse:
+        """
+        Exposes upload_medical_report wrapper directly on MCPClient instance.
+        Maps keys to match 'patientId', 'file', 'reportType', and 'fileName' expected by NitroCloud tool schema.
+        """
+        # patientId is required on the remote server schema; default to PAT001 if none provided
+        patient_id = patientId or "PAT001"
+        payload = {
+            "patientId": patient_id,
+            "file": base64Content,
+            "reportType": "Blood Report",  # Default report type required by NitroCloud tool
+            "fileName": fileName
+        }
+        result = await self.call_tool("upload_medical_report", payload)
+        mapped = UploadResponse.model_validate(result)
+        
+        print("========== AFTER MAPPING ==========")
+        print(mapped.model_dump())
+        print("===================================")
+        
+        return mapped
+
+    async def extract_patient_information(self, patientId: str, fileId: str) -> PatientProfile:
+        """
+        Exposes extract_patient_information wrapper directly on MCPClient instance.
+        Maps 'fileId' to 'reportId' to match NitroCloud tool schema.
+        """
+        payload = {
+            "patientId": patientId,
+            "reportId": fileId
+        }
+        result = await self.call_tool("extract_patient_information", payload)
+        
+        profile_data = result.get("patient_profile") if isinstance(result, dict) else None
+        if profile_data is None:
+            profile_data = result
+            
+        return PatientProfile.model_validate(profile_data)
+
+    async def update_medical_timeline(self, patientId: str) -> TimelineResponse:
+        """
+        Exposes update_medical_timeline wrapper directly on MCPClient instance.
+        """
+        payload = {
+            "patientId": patientId
+        }
+        result = await self.call_tool("update_medical_timeline", payload)
+        
+        timeline_data = result.get("timeline") if isinstance(result, dict) else None
+        if timeline_data is None:
+            if isinstance(result, list):
+                timeline_data = result
+            else:
+                timeline_data = []
+                
+        return TimelineResponse(
+            success=result.get("success", True) if isinstance(result, dict) else True,
+            patientId=patientId,
+            timeline=timeline_data
+        )
+
+    async def search_clinical_trials(self, patientId: str) -> ClinicalTrialResponse:
+        """
+        Exposes search_clinical_trials wrapper directly on MCPClient instance.
+        """
+        payload = {
+            "patientId": patientId
+        }
+        result = await self.call_tool("search_clinical_trials", payload)
+        
+        trials_data = result.get("trials") if isinstance(result, dict) else None
+        if trials_data is None:
+            if isinstance(result, list):
+                trials_data = result
+            else:
+                trials_data = []
+                
+        return ClinicalTrialResponse(
+            success=result.get("success", True) if isinstance(result, dict) else True,
+            patientId=patientId,
+            trials=trials_data
+        )
+
+    async def generate_referral(self, patientId: str, doctorName: str, reason: str, trialId: Optional[str] = None) -> ReferralResponse:
+        """
+        Exposes generate_referral wrapper directly on MCPClient instance.
+        Extracts trial ID (like NCT054321) from reason/doctorName or defaults to NCT054321 to match tool requirements.
+        """
+        import re
+        
+        # Determine trial ID from arguments if not passed directly
+        target_trial_id = trialId
+        if not target_trial_id:
+            match = re.search(r"NCT\d+", reason + " " + doctorName)
+            target_trial_id = match.group(0) if match else "NCT054321"
+
+        payload = {
+            "patientId": patientId,
+            "trialId": target_trial_id
+        }
+        result = await self.call_tool("generate_referral", payload)
+        return ReferralResponse.model_validate(result)

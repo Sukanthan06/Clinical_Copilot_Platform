@@ -18,7 +18,8 @@ async def generate_referral(
     result = await service.create_referral(
         patient_id=request.patientId,
         doctor_name=request.doctorName,
-        reason=request.reason
+        reason=request.reason,
+        trial_id=request.trialId
     )
     
     return ReferralResponse(

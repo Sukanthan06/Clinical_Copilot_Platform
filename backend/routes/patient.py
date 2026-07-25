@@ -22,10 +22,16 @@ async def upload_report(
 
     result = await service.upload_report(file_name, file_content, content_type)
     
-    return PatientUploadResponse(
+    response = PatientUploadResponse(
         success=result.get("success", True),
         patientId=result.get("patientId") or result.get("patient_id") or "",
         fileId=result.get("fileId") or result.get("file_id") or "",
         message=result.get("message") or "Report uploaded and stored successfully."
     )
+    
+    print("========== RETURNING TO FRONTEND ==========")
+    print(response.model_dump())
+    print("===========================================")
+    
+    return response
 
