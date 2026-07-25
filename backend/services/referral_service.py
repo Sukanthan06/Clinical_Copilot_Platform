@@ -1,12 +1,13 @@
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from backend.services import mcp_client
-from mcp_client.tools import generate_referral
 
 class ReferralService:
-    async def create_referral(self, patient_id: str, doctor_name: str, reason: str) -> Dict[str, Any]:
+    async def create_referral(self, patient_id: str, doctor_name: str, reason: str, trial_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Calls generate_referral wrapper to compile a referral PDF and return the URL.
         """
-        res = await generate_referral(mcp_client, patient_id, doctor_name, reason)
+        res = await mcp_client.generate_referral(patient_id, doctor_name, reason, trialId=trial_id)
         return res.model_dump()
+
+
 
