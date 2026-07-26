@@ -7,8 +7,12 @@ import { getPatientProfile } from "../services/patientService.js";
 function Profile() {
   const [data, setData] = useState(null);
 
-  useEffect(() => {
+  function loadProfile() {
     getPatientProfile().then(setData);
+  }
+
+  useEffect(() => {
+    loadProfile();
   }, []);
 
   if (!data) return null;
@@ -27,7 +31,7 @@ function Profile() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-1">
-          <ProfileCard profile={profile} />
+          <ProfileCard profile={profile} onUpdate={loadProfile} />
         </div>
 
         <div className="space-y-6 lg:col-span-2">

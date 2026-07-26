@@ -5,7 +5,6 @@ import AIInsights from "../components/AIInsights.jsx";
 import QuickActions from "../components/QuickActions.jsx";
 import RecentReports from "../components/RecentReports.jsx";
 import { getDashboardSummary } from "../services/dashboardService.js";
-import { recentReports } from "../data/reportsData.js";
 
 function Dashboard() {
   const [summary, setSummary] = useState(null);
@@ -19,7 +18,7 @@ function Dashboard() {
       <div className="mb-7">
         <p className="label-eyebrow">Welcome back</p>
         <h2 className="mt-1 font-display text-2xl font-semibold text-ink-800">
-          Sarah, here's your health snapshot
+          {localStorage.getItem("userName") || "Patient"}, here's your health snapshot
         </h2>
         <p className="mt-1.5 text-sm text-ink-500">
           Here's what's new across your reports, trials, and care plan.
@@ -45,7 +44,7 @@ function Dashboard() {
       </div>
 
       <div className="mt-6">
-        <RecentReports reports={recentReports} />
+        <RecentReports reports={summary?.recentReports ?? []} />
       </div>
     </div>
   );

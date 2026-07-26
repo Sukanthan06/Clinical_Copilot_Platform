@@ -1,14 +1,18 @@
-from typing import Optional
-from pydantic import BaseModel, Field
+from typing import Any, Dict, Optional
+from pydantic import BaseModel
 
 class ReferralRequest(BaseModel):
-    patientId: str = Field(..., description="The patient ID to refer")
-    doctorName: str = Field(..., description="Recipient doctor's name")
-    reason: str = Field(..., description="Reason/notes for referring the patient")
-    trialId: Optional[str] = Field(None, description="Optional target NCT trial ID")
-
+    patientId: str
+    trialId: str
+    doctorName: Optional[str] = None
+    reason: Optional[str] = None
 
 class ReferralResponse(BaseModel):
     success: bool
+    patientId: Optional[str] = None
+    referralId: Optional[str] = None
+    trialId: Optional[str] = None
     pdfUrl: str
-    message: str
+    llmUsed: Optional[str] = None
+    message: Optional[str] = None
+    summary: Optional[Dict[str, Any]] = None

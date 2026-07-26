@@ -16,6 +16,7 @@ from backend.routes.timeline import router as timeline_router
 from backend.routes.trials import router as trials_router
 from backend.routes.referral import router as referral_router
 from backend.routes.extraction import router as extraction_router
+from backend.routes.chat import router as chat_router
 
 # Configure logging before anything else
 setup_logging(settings.LOG_LEVEL)
@@ -66,6 +67,7 @@ app.include_router(extraction_router)
 app.include_router(timeline_router)
 app.include_router(trials_router)
 app.include_router(referral_router)
+app.include_router(chat_router)
 
 @app.get("/health", status_code=status.HTTP_200_OK)
 async def health_check() -> Dict[str, str]:

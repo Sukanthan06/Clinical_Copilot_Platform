@@ -1,7 +1,7 @@
 // Mock data for the Patient Profile page.
 
 export const patientProfile = {
-  name: "Sarah Whitfield",
+  name: localStorage.getItem("userName") || "Patient",
   age: 42,
   gender: "Female",
   bloodGroup: "O+",

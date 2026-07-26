@@ -1,6 +1,14 @@
 import { HiOutlineBell, HiOutlineCog6Tooth } from "react-icons/hi2";
 
 function Navbar() {
+  const userName = localStorage.getItem("userName") || "Patient";
+  const initials = userName
+    .split(" ")
+    .map(n => n[0])
+    .join("")
+    .substring(0, 2)
+    .toUpperCase() || "PT";
+
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-mist-300/70 bg-white/80 px-6 backdrop-blur-md md:px-8">
       <div>
@@ -29,10 +37,10 @@ function Navbar() {
 
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-teal-500 text-sm font-semibold text-white font-mono">
-            SW
+            {initials}
           </div>
           <div className="hidden leading-tight sm:block">
-            <p className="text-sm font-semibold text-ink-800">Sarah Whitfield</p>
+            <p className="text-sm font-semibold text-ink-800">{userName}</p>
             <p className="text-xs text-ink-400">Patient Account</p>
           </div>
         </div>

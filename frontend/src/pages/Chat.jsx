@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { HiOutlinePaperAirplane, HiOutlineSparkles } from "react-icons/hi2";
 import ChatBubble from "../components/chat/ChatBubble.jsx";
+import { sendMessage as apiSendMessage } from "../services/assistantService.js";
 
 const suggestedPrompts = [
   "Summarize my recent lab results",
@@ -9,17 +10,16 @@ const suggestedPrompts = [
   "Explain my hypertension diagnosis",
 ];
 
-const initialMessages = [
-  {
-    id: "m1",
-    role: "assistant",
-    content:
-      "Hi Sarah, I'm your Clinical Copilot AI Assistant. I can help explain your reports, track symptoms, or find relevant clinical trials. What would you like to know?",
-  },
-];
-
 function Chat() {
-  const [messages, setMessages] = useState(initialMessages);
+  const patientName = localStorage.getItem("userName") || "Patient";
+  
+  const [messages, setMessages] = useState([
+    {
+      id: "m1",
+      role: "assistant",
+      content: `Hi ${patientName.split(" ")[0]}, I'm your Clinical Copilot AI Assistant. I can help explain your reports, track symptoms, or find relevant clinical trials. What would you like to know?`,
+    },
+  ]);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const scrollRef = useRef(null);
@@ -28,7 +28,7 @@ function Chat() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, isThinking]);
 
-  function sendMessage(text) {
+  async function sendMessage(text) {
     const trimmed = text.trim();
     if (!trimmed) return;
 
@@ -36,18 +36,31 @@ function Chat() {
     setInput("");
     setIsThinking(true);
 
-    setTimeout(() => {
+    try {
+      const patientId = localStorage.getItem("patientId") || "PAT001";
+      const response = await apiSendMessage(patientId, trimmed);
+      
       setMessages((prev) => [
         ...prev,
         {
           id: `a-${Date.now()}`,
           role: "assistant",
-          content:
-            "This is a mock response. Once connected to the backend, I'll analyze your actual medical records to answer this precisely.",
+          content: response.answer || "Sorry, I couldn't generate a response.",
         },
       ]);
+    } catch (error) {
+      console.error("Error calling assistant:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `a-${Date.now()}`,
+          role: "assistant",
+          content: "Sorry, I encountered an error connecting to the backend.",
+        },
+      ]);
+    } finally {
       setIsThinking(false);
-    }, 900);
+    }
   }
 
   return (

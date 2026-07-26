@@ -1,41 +1,88 @@
 // uploadService.js
-// Handles medical report upload flow. Currently returns mock data.
-// Backend contract: upload_medical_report(), extract_patient_information()
+// Handles medical report upload and extraction flows. Connects to backend API Gateway.
 
-import { uploadedFilesSeed, supportedFormats } from "../data/reportsData.js";
+import { supportedFormats } from "../data/reportsData.js";
 
-const MOCK_DELAY = 600;
+const API_BASE_URL = "http://127.0.0.1:8000";
 
 export async function getUploadedFiles() {
-  await wait(MOCK_DELAY);
-  return { files: uploadedFilesSeed, supportedFormats };
+  // Files are tracked in-session only — MongoDB via MCP is the source of truth.
+  // We do NOT persist across sessions since clearing MongoDB would cause a stale UI.
+  return { files: [], supportedFormats };
 }
 
 export async function uploadMedicalReport(file) {
-  await wait(800);
-  // TODO: replace with real call, e.g.
-  // const formData = new FormData();
-  // formData.append("file", file);
-  // const res = await fetch(`${API_BASE_URL}/reports/upload`, { method: "POST", body: formData });
-  // return res.json();
-  return {
-    success: true,
-    file: {
-      id: `file-${Date.now()}`,
+  try {
+    const patientId = localStorage.getItem("patientId") || "PAT001";
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("patientId", patientId);
+
+    const res = await fetch(`${API_BASE_URL}/patient/upload`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const errData = await res.json();
+      throw new Error(errData.detail || errData.error || "Upload failed");
+    }
+
+    const data = await res.json();
+
+    // Store references
+    localStorage.setItem("lastFileId", data.reportId || data.fileId);
+    if (data.patientId) {
+      localStorage.setItem("patientId", data.patientId);
+    }
+
+    const newFile = {
+      id: data.reportId || data.fileId || `file-${Date.now()}`,
       name: file?.name ?? "untitled_report.pdf",
       size: file ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` : "0 MB",
       progress: 100,
       status: "complete",
-    },
-  };
+    };
+
+    // NOTE: We intentionally do NOT persist uploadedFilesList to localStorage
+    // because MongoDB (via MCP) is the source of truth. LocalStorage would cause
+    // stale file lists to reappear after DB clears or across sessions.
+
+    return {
+      success: true,
+      file: newFile,
+    };
+  } catch (err) {
+    console.error(err);
+    return {
+      success: false,
+      error: err.message,
+    };
+  }
 }
 
 export async function extractPatientInformation(fileId) {
-  await wait(1000);
-  // TODO: call extract_patient_information() on the backend
-  return { success: true, fileId, extracted: true };
-}
+  try {
+    const patientId = localStorage.getItem("patientId") || "PAT001";
+    const res = await fetch(`${API_BASE_URL}/extraction`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ patientId, reportId: fileId, fileId: fileId }),
+    });
 
-function wait(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+    if (!res.ok) {
+      const errData = await res.json();
+      throw new Error(errData.detail || errData.error || "Extraction failed");
+    }
+
+    const data = await res.json();
+
+    // Save extracted status in localStorage
+    localStorage.setItem("extractionStatus", JSON.stringify(data));
+
+    return { success: true, fileId, extracted: true, status: data };
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
 }
