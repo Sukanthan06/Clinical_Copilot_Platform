@@ -78,6 +78,10 @@ class TimelineResponse(BaseModel):
         "extra": "allow"
     }
 
+    model_config = {
+        "extra": "allow"
+    }
+
 class ClinicalTrial(BaseModel):
     trialId: Optional[str] = Field(None, description="ClinicalTrials.gov identifier")
     title: Optional[str] = Field(None, description="Title of the clinical study trial")
