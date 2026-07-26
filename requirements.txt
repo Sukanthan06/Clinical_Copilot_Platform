@@ -1,8 +1,30 @@
+# =============================================================
+# BACKEND — FastAPI + MCP Gateway
+# =============================================================
+
+# Web framework
 fastapi>=0.110.0
 uvicorn>=0.28.0
+
+# Data validation
 pydantic>=2.6.0
 pydantic-settings>=2.2.0
-httpx>=0.27.0
+
+# Environment variables
 python-dotenv>=1.0.1
-mcp>=1.0.0
+
+# HTTP clients (used by MCP client SSE connection + Retriever)
+httpx>=0.27.0
+requests>=2.31.0
+
+# Multipart file upload support (required for /patient/upload endpoint)
 python-multipart>=0.0.9
+
+# MCP (Model Context Protocol) client
+mcp>=1.0.0
+
+# AI / LLM
+groq>=0.2.0
+
+# Vector database (Pinecone)
+pinecone-client>=2.2.5

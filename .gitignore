@@ -1,26 +1,88 @@
-# Virtual Environment
+# =============================================================
+# PYTHON / BACKEND
+# =============================================================
+
+# Virtual Environments
 venv/
 .venv/
 env/
 ENV/
 
-# Local Environment Secrets & Configurations
-.env
-
 # Python Caches & Bytecode
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyo
 .pytest_cache/
 .mypy_cache/
+.ruff_cache/
 
-# OS Files
+# Distribution / Packaging
+dist/
+build/
+*.egg-info/
+*.egg
+.eggs/
+
+# =============================================================
+# ENVIRONMENT & SECRETS  (never commit these)
+# =============================================================
+.env
+.env.*
+!.env.example
+
+# =============================================================
+# FRONTEND / NODE
+# =============================================================
+
+# Dependencies
+frontend/node_modules/
+node_modules/
+
+# Vite build output
+frontend/dist/
+frontend/.vite/
+
+# Vite cache
+frontend/.cache/
+
+# Local Vite env files
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# =============================================================
+# LOGS
+# =============================================================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+logs/
+
+# =============================================================
+# OS / EDITOR FILES
+# =============================================================
+.DS_Store
 Thumbs.db
 desktop.ini
-.DS_Store
 
-# Editor Settings
 .vscode/
 .idea/
 *.swp
 *.swo
+
+# =============================================================
+# MISC
+# =============================================================
+
+# Coverage reports
+htmlcov/
+.coverage
+coverage.xml
+
+# Temporary / scratch
+*.tmp
+*.bak

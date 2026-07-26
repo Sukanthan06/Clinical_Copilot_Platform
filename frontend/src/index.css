@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  height: 100%;
+  background-color: #f4f7f6;
+  font-family: "Inter", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #a8c0cb transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: #a8c0cb;
+  border-radius: 999px;
+}
+
+:focus-visible {
+  outline: 2px solid #0e9384;
+  outline-offset: 2px;
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-2xl shadow-soft border border-mist-200/70;
+  }
+
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-lift hover:-translate-y-0.5;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-teal-500 px-4 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:bg-teal-600 hover:shadow-card active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-ink-100 bg-white px-4 py-2.5 text-sm font-semibold text-ink-700 transition-all duration-200 hover:bg-mist-100 active:scale-[0.98];
+  }
+
+  .label-eyebrow {
+    @apply text-xs font-semibold uppercase tracking-wider text-teal-600;
+  }
+}
+
+/* signature: subtle animated vitals line used as an ambient motif */
+.vitals-line {
+  stroke-dasharray: 6 4;
+  animation: pulseLine 2.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
