@@ -1,4 +1,12 @@
+from pathlib import Path
+
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Keep the gateway configuration consistent with the connection diagnostic.
+# In particular, avoid a stale system-level MCP_SERVER_URL overriding the
+# project endpoint in .env.
+load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=True)
 
 class MCPConfig(BaseSettings):
     """

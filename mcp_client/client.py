@@ -20,6 +20,15 @@ from mcp_client.schemas import (
 
 logger = logging.getLogger("mcp_client.client")
 
+REQUIRED_TOOL_NAMES = frozenset({
+    "authenticate_user",
+    "upload_medical_report",
+    "extract_patient_information",
+    "update_medical_timeline",
+    "search_clinical_trials",
+    "generate_referral",
+})
+
 class MCPClient:
     """
     Asynchronous Model Context Protocol (MCP) Client.
@@ -31,6 +40,7 @@ class MCPClient:
         self.session: Optional[ClientSession] = None
         self._exit_stack: Optional[AsyncExitStack] = None
         self._lock = asyncio.Lock()
+        self._tool_names: set[str] = set()
 
     async def connect(self) -> None:
         """Establishes connection to the remote MCP SSE Server. Thread-safe."""
@@ -38,10 +48,10 @@ class MCPClient:
             if self.session:
                 return
 
-            logger.info("Connecting to MCP SSE Server at %s...", self.sse_url)
+            logger.info("Connecting to MCP server at %s...", self.sse_url)
             self._exit_stack = AsyncExitStack()
             try:
-                # sse_client returns (read_stream, write_stream)
+                # NitroCloud advertises `/mcp` as its raw SSE endpoint.
                 read_stream, write_stream = await self._exit_stack.enter_async_context(
                     sse_client(self.sse_url)
                 )
@@ -50,9 +60,11 @@ class MCPClient:
                 )
                 # Perform protocol initialization
                 await self.session.initialize()
-                logger.info("Connected and initialized MCP Client session.")
+                tools = await self.session.list_tools()
+                self._tool_names = {tool.name for tool in tools.tools}
+                logger.info("Connected and initialized MCP client session.")
             except Exception as e:
-                logger.error("Failed to connect to MCP SSE Server: %s", e)
+                logger.error("Failed to connect to MCP server: %s", e)
                 await self._disconnect_internal()
                 raise MCPConnectionError(f"Failed to connect to MCP server: {e}")
 
@@ -71,6 +83,7 @@ class MCPClient:
                 logger.warning("Error closing MCP client exit stack: %s", e)
             self._exit_stack = None
         self.session = None
+        self._tool_names.clear()
         logger.info("MCP Client disconnected.")
 
     def is_connected(self) -> bool:
@@ -84,6 +97,21 @@ class MCPClient:
             "mcp": "connected" if self.is_connected() else "disconnected"
         }
 
+    async def verify_connection(self) -> list[str]:
+        """Verify the active MCP session can make a request and list its tools."""
+        await self.connect()
+        if not self.session:
+            raise MCPConnectionError("MCP session was not established")
+
+        try:
+            result = await self.session.list_tools()
+            self._tool_names = {tool.name for tool in result.tools}
+            return sorted(self._tool_names)
+        except Exception as exc:
+            logger.exception("MCP readiness check failed")
+            await self.disconnect()
+            raise MCPConnectionError(f"MCP readiness check failed: {exc}") from exc
+
     async def call_tool(self, tool_name: str, arguments: Optional[Dict[str, Any]] = None) -> Any:
         """
         Executes a tool on the MCP server with request timeouts, logging, and automatic reconnection.
@@ -91,14 +119,6 @@ class MCPClient:
         Raises MCPConnectionError on transport failures.
         Raises MCPToolError on tool execution issues.
         """
-        # Print REQUEST SENT TO MCP
-        print("=================================================")
-        print("REQUEST SENT TO MCP")
-        print("=================================================")
-        print(f"Tool Name: {tool_name}")
-        print(json.dumps(arguments or {}, indent=2, default=str))
-        print("=================================================")
-
         # Ensure session is connected
         if not self.session:
             logger.info("Session not active. Attempting reconnect before calling tool '%s'...", tool_name)
@@ -126,14 +146,9 @@ class MCPClient:
 
                 logger.info("Tool Success: '%s' completed successfully", tool_name)
                 
-                text_content = result.content[0].text if result.content else ""
-                
-                # Print RAW MCP RESPONSE
-                print("=================================================")
-                print("RAW MCP RESPONSE")
-                print("=================================================")
-                print(text_content)
-                print("=================================================")
+                text_content = "\n".join(
+                    block.text for block in result.content if hasattr(block, "text")
+                )
 
                 try:
                     return json.loads(text_content)
@@ -190,7 +205,7 @@ class MCPClient:
         result = await self.call_tool("authenticate_user", payload)
         return AuthenticationResponse.model_validate(result)
 
-    async def upload_medical_report(self, patientId: Optional[str], fileName: str, contentType: str, base64Content: str) -> UploadResponse:
+    async def upload_medical_report(self, patientId: Optional[str], fileName: str, reportType: str, base64Content: str) -> UploadResponse:
         """
         Exposes upload_medical_report wrapper directly on MCPClient instance.
         Maps keys to match 'patientId', 'file', 'reportType', and 'fileName' expected by NitroCloud tool schema.
@@ -201,7 +216,7 @@ class MCPClient:
         payload = {
             "patientId": patientId,
             "file": base64Content,
-            "reportType": "Blood Report",  # Required report type parameter
+            "reportType": reportType,
             "fileName": fileName
         }
         result = await self.call_tool("upload_medical_report", payload)
@@ -283,3 +298,15 @@ class MCPClient:
         }
         result = await self.call_tool("generate_referral", payload)
         return ReferralResponse.model_validate(result)
+
+    async def get_patient_profile(self, patient_id: str) -> PatientProfile:
+        """Read the persisted profile. Requires the MCP read tool documented in README."""
+        result = await self.call_tool("get_patient_profile", {"patientId": patient_id})
+        return PatientProfile.model_validate(result)
+
+    async def list_medical_reports(self, patient_id: str) -> Dict[str, Any]:
+        """Read persisted report metadata. Requires the MCP read tool documented in README."""
+        result = await self.call_tool("list_medical_reports", {"patientId": patient_id})
+        if not isinstance(result, dict):
+            raise MCPToolError("list_medical_reports returned a non-object response")
+        return result

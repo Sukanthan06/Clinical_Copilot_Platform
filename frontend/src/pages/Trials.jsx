@@ -4,10 +4,14 @@ import { searchClinicalTrials, applyToTrial } from "../services/trialService.js"
 
 function Trials() {
   const [trials, setTrials] = useState([]);
+  const [message, setMessage] = useState("");
   const [appliedIds, setAppliedIds] = useState([]);
 
   useEffect(() => {
-    searchClinicalTrials().then((res) => setTrials(res.trials));
+    searchClinicalTrials().then((res) => {
+      setTrials(res.trials);
+      setMessage(res.reason || "");
+    });
   }, []);
 
   async function handleApply(trialId) {
@@ -27,8 +31,13 @@ function Trials() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {trials.map((trial) => (
+      {trials.length === 0 ? (
+        <div className="card p-8 text-center text-sm text-ink-500">
+          {message || "No clinical trial matches are available yet."}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {trials.map((trial) => (
           <div key={trial.id} className="relative">
             <TrialCard trial={trial} onApply={handleApply} />
             {appliedIds.includes(trial.id) && (
@@ -37,8 +46,9 @@ function Trials() {
               </div>
             )}
           </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

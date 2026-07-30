@@ -2,12 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  scroll-behavior: smooth;
+}
+
 html,
 body {
   height: 100%;
   background-color: #f4f7f6;
   font-family: "Inter", sans-serif;
   -webkit-font-smoothing: antialiased;
+  color: #15303F;
 }
 
 * {
@@ -32,30 +37,87 @@ body {
 
 @layer components {
   .card {
-    @apply bg-white rounded-2xl shadow-soft border border-mist-200/70;
+    @apply bg-white/90 backdrop-blur-sm rounded-2xl shadow-soft border border-mist-200/80 transition-all duration-300;
+  }
+
+  .card-glass {
+    @apply bg-white/75 backdrop-blur-md rounded-2xl shadow-glass border border-white/60 transition-all duration-300;
   }
 
   .card-hover {
-    @apply transition-all duration-300 hover:shadow-lift hover:-translate-y-0.5;
+    @apply transition-all duration-300 ease-out hover:shadow-lift hover:-translate-y-1 hover:border-teal-500/30;
+  }
+
+  .glass-header {
+    @apply bg-white/80 backdrop-blur-md border-b border-mist-200/80 shadow-sm;
   }
 
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-teal-500 px-4 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:bg-teal-600 hover:shadow-card active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply relative overflow-hidden inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-300 hover:from-teal-600 hover:to-teal-700 hover:shadow-glow active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-ink-100 bg-white px-4 py-2.5 text-sm font-semibold text-ink-700 transition-all duration-200 hover:bg-mist-100 active:scale-[0.98];
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-ink-100 bg-white/90 backdrop-blur-sm px-4 py-2.5 text-sm font-semibold text-ink-700 shadow-sm transition-all duration-200 hover:bg-mist-100 hover:border-ink-200 hover:shadow-soft active:scale-[0.97];
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-ink-600 transition-all duration-200 hover:bg-teal-500/10 hover:text-teal-700 active:scale-[0.97];
   }
 
   .label-eyebrow {
     @apply text-xs font-semibold uppercase tracking-wider text-teal-600;
   }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-ink-800 via-teal-700 to-teal-500 bg-clip-text text-transparent;
+  }
+
+  .text-gradient-teal {
+    @apply bg-gradient-to-r from-teal-600 to-teal-400 bg-clip-text text-transparent;
+  }
+
+  .badge-glow {
+    @apply relative inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold;
+  }
 }
 
-/* signature: subtle animated vitals line used as an ambient motif */
+/* Signature vitals pulse animation */
 .vitals-line {
   stroke-dasharray: 6 4;
   animation: pulseLine 2.2s ease-in-out infinite;
+}
+
+/* Ambient glow orb animation background */
+.ambient-glow-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  opacity: 0.45;
+  animation: floatSlow 8s ease-in-out infinite alternate;
+}
+
+/* Custom shimmer effect */
+.shimmer-bg {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-bg::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.4) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: shimmer 2.5s infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

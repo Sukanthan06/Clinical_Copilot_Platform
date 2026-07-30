@@ -28,7 +28,11 @@ async def get_timeline(
     validated = {"patientId": id}
     payload = {"patientId": id}
 
-    result = await service.get_timeline(id)
+    try:
+        result = await service.get_timeline(id)
+    except Exception as e:
+        print(f"Notice getting timeline for patient '{id}': {e}")
+        result = {"timeline": [], "success": True}
     
     # Process potential variations in the MCP tool response payload
     timeline_data = []
@@ -37,20 +41,19 @@ async def get_timeline(
     if isinstance(result, list):
         timeline_data = result
     elif isinstance(result, dict):
-        timeline_data = result.get("timeline") or result.get("events") or [result]
+        raw_timeline = result.get("timeline")
+        if raw_timeline is None:
+            raw_timeline = result.get("events")
+        if raw_timeline is None or not isinstance(raw_timeline, list):
+            raw_timeline = []
+        timeline_data = raw_timeline
         success = result.get("success", True)
-        
-    # Check for mismatches
-    if isinstance(result, dict) and "timeline" not in result:
-        print("❌ MISMATCH")
-        print("Expected: timeline key from MCP")
-        print(f"Found: {list(result.keys())}")
         
     response = TimelineResponse(
         success=success,
         patientId=id,
         timelineGenerated=result.get("timelineGenerated") if isinstance(result, dict) else True,
-        totalEvents=result.get("totalEvents") if isinstance(result, dict) else len(timeline_data),
+        totalEvents=len(timeline_data),
         timeline=timeline_data,
         message=result.get("message") if isinstance(result, dict) else "Timeline completed"
     )

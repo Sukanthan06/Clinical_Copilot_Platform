@@ -19,11 +19,22 @@ function Timeline() {
         </p>
       </div>
 
-      <div>
-        {events.map((event, idx) => (
-          <TimelineCard key={event.id} event={event} isLast={idx === events.length - 1} />
-        ))}
-      </div>
+      {events.length === 0 ? (
+        <div className="card p-10 text-center">
+          <h3 className="font-display text-lg font-semibold text-ink-800">
+            No Timeline Events Yet
+          </h3>
+          <p className="mx-auto mt-2 max-w-md text-sm text-ink-500">
+            Upload medical reports in the <strong>Upload Reports</strong> tab and process them to compile your chronological medical timeline.
+          </p>
+        </div>
+      ) : (
+        <div>
+          {events.map((event, idx) => (
+            <TimelineCard key={event.id} event={event} isLast={idx === events.length - 1} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

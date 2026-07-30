@@ -1,22 +1,40 @@
 // uploadService.js
 // Handles medical report upload and extraction flows. Connects to backend API Gateway.
 
-import { supportedFormats } from "../data/reportsData.js";
+import { API_BASE_URL, readError, requirePatientId } from "./api.js";
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+export const supportedFormats = ["PDF", "PNG", "JPG", "JPEG", "TIFF", "BMP", "DOCX", "TXT", "CSV", "XLSX"];
 
 export async function getUploadedFiles() {
-  // Files are tracked in-session only — MongoDB via MCP is the source of truth.
-  // We do NOT persist across sessions since clearing MongoDB would cause a stale UI.
-  return { files: [], supportedFormats };
+  try {
+    const patientId = requirePatientId();
+    const response = await fetch(`${API_BASE_URL}/patient/${patientId}/reports`);
+    if (!response.ok) throw new Error(await readError(response, "Unable to load reports"));
+    const data = await response.json();
+    return {
+      files: (data.reports || []).map((report) => ({
+        id: report.reportId || report.fileId,
+        name: report.fileName || "Unnamed report",
+        size: report.size || "—",
+        progress: 100,
+        status: report.status || "complete",
+      })),
+      supportedFormats,
+    };
+  } catch (error) {
+    console.error("Unable to load uploaded reports:", error);
+    return { files: [], supportedFormats };
+  }
 }
 
-export async function uploadMedicalReport(file) {
+export async function uploadMedicalReport(file, reportType) {
   try {
-    const patientId = localStorage.getItem("patientId") || "PAT001";
+    const patientId = requirePatientId();
+    if (!reportType) throw new Error("Choose a report type before uploading.");
     const formData = new FormData();
     formData.append("file", file);
     formData.append("patientId", patientId);
+    formData.append("reportType", reportType);
 
     const res = await fetch(`${API_BASE_URL}/patient/upload`, {
       method: "POST",
@@ -24,29 +42,22 @@ export async function uploadMedicalReport(file) {
     });
 
     if (!res.ok) {
-      const errData = await res.json();
-      throw new Error(errData.detail || errData.error || "Upload failed");
+      throw new Error(await readError(res, "Upload failed"));
     }
 
     const data = await res.json();
 
-    // Store references
+    // Store references scoped to current patientId
+    localStorage.setItem(`lastFileId_${patientId}`, data.reportId || data.fileId);
     localStorage.setItem("lastFileId", data.reportId || data.fileId);
-    if (data.patientId) {
-      localStorage.setItem("patientId", data.patientId);
-    }
 
     const newFile = {
-      id: data.reportId || data.fileId || `file-${Date.now()}`,
+      id: data.reportId || data.fileId,
       name: file?.name ?? "untitled_report.pdf",
       size: file ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` : "0 MB",
       progress: 100,
       status: "complete",
     };
-
-    // NOTE: We intentionally do NOT persist uploadedFilesList to localStorage
-    // because MongoDB (via MCP) is the source of truth. LocalStorage would cause
-    // stale file lists to reappear after DB clears or across sessions.
 
     return {
       success: true,
@@ -63,7 +74,7 @@ export async function uploadMedicalReport(file) {
 
 export async function extractPatientInformation(fileId) {
   try {
-    const patientId = localStorage.getItem("patientId") || "PAT001";
+    const patientId = requirePatientId();
     const res = await fetch(`${API_BASE_URL}/extraction`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -71,14 +82,27 @@ export async function extractPatientInformation(fileId) {
     });
 
     if (!res.ok) {
-      const errData = await res.json();
-      throw new Error(errData.detail || errData.error || "Extraction failed");
+      throw new Error(await readError(res, "Extraction failed"));
     }
 
     const data = await res.json();
+    // Ensure patientId is attached to extraction result data
+    data.patientId = data.patientId || patientId;
 
-    // Save extracted status in localStorage
+    // Save extracted status in patient-scoped localStorage
+    localStorage.setItem(`extractionStatus_${patientId}`, JSON.stringify(data));
     localStorage.setItem("extractionStatus", JSON.stringify(data));
+    
+    // Save into aggregated extractedReportsMap dictionary scoped to patientId
+    let reportsMap = {};
+    try {
+      const existing = localStorage.getItem(`extractedReportsMap_${patientId}`);
+      if (existing) reportsMap = JSON.parse(existing);
+    } catch (e) {
+      console.error("Failed to parse extractedReportsMap", e);
+    }
+    reportsMap[fileId] = data;
+    localStorage.setItem(`extractedReportsMap_${patientId}`, JSON.stringify(reportsMap));
 
     return { success: true, fileId, extracted: true, status: data };
   } catch (err) {

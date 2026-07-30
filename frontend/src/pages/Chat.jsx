@@ -11,18 +11,23 @@ const suggestedPrompts = [
 ];
 
 function Chat() {
-  const patientName = localStorage.getItem("userName") || "Patient";
-  
-  const [messages, setMessages] = useState([
-    {
-      id: "m1",
-      role: "assistant",
-      content: `Hi ${patientName.split(" ")[0]}, I'm your Clinical Copilot AI Assistant. I can help explain your reports, track symptoms, or find relevant clinical trials. What would you like to know?`,
-    },
-  ]);
+  const patientId = localStorage.getItem("patientId") || "";
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const scrollRef = useRef(null);
+
+  useEffect(() => {
+    const patientName = localStorage.getItem("userName") || "Patient";
+    const firstName = patientName.split(" ")[0];
+    setMessages([
+      {
+        id: "m1",
+        role: "assistant",
+        content: `Hi ${firstName}, I'm your Clinical Copilot AI Assistant. I can help explain your reports, track symptoms, or find relevant clinical trials. What would you like to know?`,
+      },
+    ]);
+  }, [patientId]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -37,8 +42,11 @@ function Chat() {
     setIsThinking(true);
 
     try {
-      const patientId = localStorage.getItem("patientId") || "PAT001";
-      const response = await apiSendMessage(patientId, trimmed);
+      const activePatientId = localStorage.getItem("patientId");
+      if (!activePatientId || activePatientId === "undefined") {
+        throw new Error("Please sign in before using the assistant.");
+      }
+      const response = await apiSendMessage(activePatientId, trimmed);
       
       setMessages((prev) => [
         ...prev,

@@ -8,3 +8,5 @@ class TimelineResponse(BaseModel):
     totalEvents: Optional[int] = None
     timeline: List[Dict[str, Any]]
     message: Optional[str] = None
+
+    model_config = {"extra": "allow"}

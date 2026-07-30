@@ -1,7 +1,7 @@
 // dashboardService.js
 // Supplies data for the Dashboard page. Calculated dynamically based on user state.
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+import { API_BASE_URL } from "./api.js";
 
 export async function getDashboardSummary() {
   const patientId = localStorage.getItem("patientId") || "";
@@ -11,7 +11,7 @@ export async function getDashboardSummary() {
   let conditionsCount = 0;
   let reportsCount = 0;
 
-  if (patientId && patientId !== "patient_mock_123" && patientId !== "undefined") {
+  if (patientId && patientId !== "undefined") {
     try {
       // Fetch actual data from backend which reads from MongoDB via MCP
       const [timelineRes, trialsRes, profileRes] = await Promise.all([
@@ -33,9 +33,11 @@ export async function getDashboardSummary() {
         conditionsCount = pData.diagnoses?.length || 0;
       }
       
-      // Since there's no backend endpoint for fetching the reports list yet,
-      // we infer report presence from timeline events.
-      reportsCount = timeline.length > 0 ? 1 : 0;
+      const reportsRes = await fetch(`${API_BASE_URL}/patient/${patientId}/reports`).catch(() => null);
+      if (reportsRes?.ok) {
+        const reportData = await reportsRes.json();
+        reportsCount = (reportData.reports || []).length;
+      }
     } catch (e) {
       console.error("Failed to fetch dashboard data from backend", e);
     }

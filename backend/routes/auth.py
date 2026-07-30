@@ -13,7 +13,7 @@ def get_auth_service() -> AuthService:
 async def register(request: UserAuthRequest, service: AuthService = Depends(get_auth_service)) -> AuthResponse:
     """Registers a new user by calling authenticate_user MCP tool."""
     incoming = request.model_dump()
-    email_val = request.email
+    email_val = request.email.strip().lower()
         
     validated = {
         "email": email_val,
@@ -30,30 +30,45 @@ async def register(request: UserAuthRequest, service: AuthService = Depends(get_
     if request.name:
         payload["name"] = request.name
         
-    result = await service.register(email_val, request.password, request.name)
-    
-    # Process potential nested response variations
-    success = result.get("success", True)
-    patient_id = result.get("patientId") or result.get("patient_id") or ""
-    token = result.get("token") or ""
-    name = result.get("name") or request.name or ""
+    try:
+        result = await service.register(email_val, request.password, request.name)
+    except Exception as e:
+        err_msg = str(e)
+        if "Tool Failure:" in err_msg:
+            err_msg = err_msg.split("returned error:", 1)[-1].strip()
+        print(f"❌ Registration error: {err_msg}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=err_msg or "Registration failed."
+        )
+
+    if isinstance(result, dict) and result.get("success") is False:
+        err_msg = result.get("message") or result.get("error") or "Registration failed."
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=err_msg
+        )
+
+    patient_id = result.get("patientId") or result.get("patient_id") or result.get("id")
+    token = result.get("token") or result.get("access_token")
+    name = result.get("name") or request.name or email_val.split("@")[0].capitalize()
     message = result.get("message") or "Account registration successful."
-    
-    # Check for mismatch
-    if "patientId" not in result:
-        print("❌ MISMATCH")
-        print("Expected: patientId")
-        print(f"Found: {list(result.keys())}")
-        
+
+    if not patient_id or not token:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Registration failed: Invalid response from authentication server."
+        )
+
     response = AuthResponse(
-        success=success,
+        success=True,
         action="register",
         patientId=patient_id,
         token=token,
         name=name,
         message=message,
         data={
-            "success": success,
+            "success": True,
             "patientId": patient_id,
             "token": token,
             "name": name,
@@ -76,9 +91,6 @@ async def register(request: UserAuthRequest, service: AuthService = Depends(get_
     print("Raw MCP Response:")
     print(json.dumps(result, indent=2, default=str))
     print("v")
-    print("Mapped Response:")
-    print(response.model_dump_json(indent=2))
-    print("v")
     print("Returned Response:")
     print(response.model_dump_json(indent=2))
     print("==========================================")
@@ -89,7 +101,7 @@ async def register(request: UserAuthRequest, service: AuthService = Depends(get_
 async def login(request: UserAuthRequest, service: AuthService = Depends(get_auth_service)) -> AuthResponse:
     """Logs in an existing user by calling authenticate_user MCP tool."""
     incoming = request.model_dump()
-    email_val = request.email
+    email_val = request.email.strip().lower()
         
     validated = {
         "email": email_val,
@@ -103,29 +115,45 @@ async def login(request: UserAuthRequest, service: AuthService = Depends(get_aut
         "password": request.password
     }
     
-    result = await service.login(email_val, request.password)
-    
-    success = result.get("success", True)
-    patient_id = result.get("patientId") or result.get("patient_id") or ""
-    token = result.get("token") or ""
-    name = result.get("name") or ""
+    try:
+        result = await service.login(email_val, request.password)
+    except Exception as e:
+        err_msg = str(e)
+        if "Tool Failure:" in err_msg:
+            err_msg = err_msg.split("returned error:", 1)[-1].strip()
+        print(f"❌ Login error: {err_msg}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=err_msg or "Authentication failed."
+        )
+
+    if isinstance(result, dict) and result.get("success") is False:
+        err_msg = result.get("message") or result.get("error") or "Authentication failed."
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=err_msg
+        )
+
+    patient_id = result.get("patientId") or result.get("patient_id") or result.get("id")
+    token = result.get("token") or result.get("access_token")
+    name = result.get("name") or email_val.split("@")[0].capitalize()
     message = result.get("message") or "Login successful."
-    
-    # Check for mismatch
-    if "patientId" not in result:
-        print("❌ MISMATCH")
-        print("Expected: patientId")
-        print(f"Found: {list(result.keys())}")
-        
+
+    if not patient_id or not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication failed: Invalid response from authentication server."
+        )
+
     response = AuthResponse(
-        success=success,
+        success=True,
         action="login",
         patientId=patient_id,
         token=token,
         name=name,
         message=message,
         data={
-            "success": success,
+            "success": True,
             "patientId": patient_id,
             "token": token,
             "name": name,
@@ -147,9 +175,6 @@ async def login(request: UserAuthRequest, service: AuthService = Depends(get_aut
     print("v")
     print("Raw MCP Response:")
     print(json.dumps(result, indent=2, default=str))
-    print("v")
-    print("Mapped Response:")
-    print(response.model_dump_json(indent=2))
     print("v")
     print("Returned Response:")
     print(response.model_dump_json(indent=2))

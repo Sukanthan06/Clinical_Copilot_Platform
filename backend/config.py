@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     HOST: str = "127.0.0.1"
     PORT: int = 8000
+    INTERNAL_API_BASE_URL: str = ""
     
     # CORS Origins can be list of strings or JSON-encoded string
     CORS_ORIGINS: Union[str, List[str]] = ["*"]

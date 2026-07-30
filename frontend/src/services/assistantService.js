@@ -1,7 +1,8 @@
-import axios from "axios";
+// assistantService.js
+// Handles AI assistant chat calls. Connects to backend API Gateway → Groq (RAG pipeline).
 
-// Base URL can be set via VITE_API_BASE in .env (e.g., http://localhost:8000)
-const API_BASE = import.meta.env.VITE_API_BASE ?? "";
+const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+const API_BASE = configuredBaseUrl ? configuredBaseUrl.replace(/\/$/, "") : "";
 
 /**
  * Send a message to the AI assistant backend.
@@ -11,8 +12,20 @@ const API_BASE = import.meta.env.VITE_API_BASE ?? "";
  * @returns {Promise<{success: boolean, answer: string, sources: string[]}>}
  */
 export const sendMessage = async (patientId, message, token) => {
-  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  const headers = {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
   const payload = { patientId, message };
-  const { data } = await axios.post(`${API_BASE}/api/v1/assistant/chat`, payload, { headers });
-  return data;
+  const res = await fetch(`${API_BASE}/api/v1/assistant/chat`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || err.error || "Assistant request failed.");
+  }
+  return res.json();
 };
+

@@ -1,5 +1,5 @@
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 class AuthenticationRequest(BaseModel):
     email: str = Field(..., description="Email of the clinical user")
@@ -14,6 +14,15 @@ class AuthenticationResponse(BaseModel):
     token: Optional[str] = Field(None, description="Active session or authentication token")
     name: Optional[str] = Field(None, description="Full name of the user/patient")
     message: Optional[str] = Field(None, description="Detailed message")
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            data["patientId"] = data.get("patientId") or data.get("patient_id") or data.get("id") or data.get("userId") or data.get("user_id")
+            data["token"] = data.get("token") or data.get("access_token") or data.get("session_token") or data.get("authToken")
+            data["name"] = data.get("name") or data.get("displayName") or data.get("full_name")
+        return data
 
     model_config = {
         "extra": "allow"

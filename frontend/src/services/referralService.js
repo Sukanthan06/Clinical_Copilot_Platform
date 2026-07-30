@@ -3,10 +3,10 @@
 // MCP tool: generate_referral({ patientId, trialId })
 // MCP response: { success, referralId, patientId, trialId, pdfUrl, llm }
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+import { API_BASE_URL, readError, requirePatientId } from "./api.js";
 
 export async function generateReferral({ trialId }) {
-  const patientId = localStorage.getItem("patientId") || "";
+  const patientId = requirePatientId();
 
   if (!patientId) {
     throw new Error("No patient ID found. Please log in again.");
@@ -22,25 +22,25 @@ export async function generateReferral({ trialId }) {
   });
 
   if (!res.ok) {
-    const errData = await res.json().catch(() => ({}));
-    throw new Error(errData.detail || errData.error || "Referral generation failed");
+    throw new Error(await readError(res, "Referral generation failed"));
   }
 
   // MCP response shape:
   // { success, referralId, patientId, trialId, pdfUrl, llm, message }
   const data = await res.json();
 
-  // Cache the PDF URL for later access
+  // Cache the PDF URL for later access (patient-scoped)
   if (data.pdfUrl) {
+    localStorage.setItem(`lastReferralPdfUrl_${patientId}`, data.pdfUrl);
     localStorage.setItem("lastReferralPdfUrl", data.pdfUrl);
-    localStorage.setItem("lastReferralId", data.referralId || "");
-    localStorage.setItem("lastTrialId", trialId);
+    localStorage.setItem(`lastReferralId_${patientId}`, data.referralId || "");
+    localStorage.setItem(`lastTrialId_${patientId}`, trialId);
   }
 
   return {
     success: data.success ?? true,
     referral: {
-      referralId: data.referralId || `ref-${Date.now()}`,
+      referralId: data.referralId,
       patientId: data.patientId || patientId,
       trialId: data.trialId || trialId,
       pdfUrl: data.pdfUrl || "",
@@ -56,7 +56,10 @@ export async function generateReferral({ trialId }) {
 }
 
 export async function openReferralPdf() {
-  const url = localStorage.getItem("lastReferralPdfUrl");
+  const patientId = localStorage.getItem("patientId") || "";
+  const url = patientId 
+    ? localStorage.getItem(`lastReferralPdfUrl_${patientId}`) || localStorage.getItem("lastReferralPdfUrl")
+    : localStorage.getItem("lastReferralPdfUrl");
   if (url) {
     window.open(url, "_blank");
     return { success: true, url };

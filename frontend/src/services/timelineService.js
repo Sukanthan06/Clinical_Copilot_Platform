@@ -1,10 +1,10 @@
 // timelineService.js
 // Supplies medical timeline events. Connects to backend API Gateway.
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+import { API_BASE_URL, requirePatientId } from "./api.js";
 
 export async function getTimelineEvents() {
-  const patientId = localStorage.getItem("patientId") || "PAT001";
+  const patientId = requirePatientId();
   try {
     const res = await fetch(`${API_BASE_URL}/patient/${patientId}/timeline`);
     if (!res.ok) {
@@ -41,5 +41,5 @@ export async function getTimelineEvents() {
 }
 
 export async function addTimelineEvent(event) {
-  return { success: true, event: { id: `tl-${Date.now()}`, ...event } };
+  throw new Error("Manual timeline entries are not supported by the configured MCP tools.");
 }

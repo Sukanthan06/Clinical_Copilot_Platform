@@ -1,11 +1,11 @@
 // patientService.js
 // Supplies patient profile data. Fetches from backend API Gateway → MongoDB via MCP.
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+import { API_BASE_URL } from "./api.js";
 
 export async function getPatientProfile() {
   const patientId = localStorage.getItem("patientId") || "";
-  const nameVal = localStorage.getItem("userName") || "Patient";
+  const nameVal = localStorage.getItem("userName") || "";
   const initials = nameVal
     .split(" ")
     .map((n) => n[0])
@@ -31,7 +31,7 @@ export async function getPatientProfile() {
     recentReports: [],
   };
 
-  if (!patientId || patientId === "patient_mock_123" || patientId === "undefined") {
+  if (!patientId || patientId === "undefined") {
     return emptyProfile;
   }
 

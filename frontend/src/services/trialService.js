@@ -1,10 +1,19 @@
 // trialService.js
 // Supplies clinical trial matches. Connects to backend API Gateway.
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+import { API_BASE_URL, requirePatientId } from "./api.js";
 
 export async function searchClinicalTrials(query = {}) {
-  const patientId = localStorage.getItem("patientId") || "PAT001";
+  const patientId = requirePatientId();
+  const extraction = JSON.parse(
+    localStorage.getItem(`extractionStatus_${patientId}`) || localStorage.getItem("extractionStatus") || "null"
+  );
+  if (!extraction?.processed || !extraction?.profileUpdated) {
+    return {
+      trials: [],
+      reason: "Upload and process at least one medical report before searching for clinical trials.",
+    };
+  }
   try {
     const res = await fetch(`${API_BASE_URL}/patient/${patientId}/clinical-trials`);
     if (!res.ok) {
@@ -14,7 +23,7 @@ export async function searchClinicalTrials(query = {}) {
 
     if (data.trials && data.trials.length > 0) {
       const mapped = data.trials.map((t, index) => {
-        let score = 85;
+        let score = 0;
         if (t.eligibilityScore !== undefined) {
           score = t.eligibilityScore;
         } else if (t.matchScore !== undefined) {
@@ -31,21 +40,21 @@ export async function searchClinicalTrials(query = {}) {
           id: t.trialId || `trial-${index}`,
           name: t.title || "Clinical Study Trial",
           hospital: t.location || "—",
-          phase: t.phase || "Phase II",
-          status: t.status || "Recruiting",
+          phase: t.phase || "Not provided",
+          status: t.status || "Not provided",
           confidence: score,
           distance: t.location || "—",
           eligibility: reasonText || "Based on your clinical profile",
-          trialId: t.trialId || `trial-${index}`
+          trialId: t.trialId
         };
       });
-      return { trials: mapped };
+      return { trials: mapped, reason: null };
     }
   } catch (err) {
     console.error("Failed to fetch live trials:", err);
   }
 
-  return { trials: [] };
+  return { trials: [], reason: "No clinical trial matches are available yet." };
 }
 
 export async function applyToTrial(trialId) {

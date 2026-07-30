@@ -27,4 +27,6 @@ mcp>=1.0.0
 groq>=0.2.0
 
 # Vector database (Pinecone)
-pinecone-client>=2.2.5
+# The legacy `pinecone-client` distribution now raises at import time. The
+# official SDK distribution is named `pinecone`.
+pinecone>=6.0.0

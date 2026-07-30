@@ -16,3 +16,5 @@ class ReferralResponse(BaseModel):
     llmUsed: Optional[str] = None
     message: Optional[str] = None
     summary: Optional[Dict[str, Any]] = None
+
+    model_config = {"extra": "allow"}

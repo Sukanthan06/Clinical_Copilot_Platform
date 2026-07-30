@@ -1,6 +1,6 @@
 import logging
 from contextlib import asynccontextmanager
-from typing import Dict
+from typing import Any, Dict
 from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -30,7 +30,8 @@ async def lifespan(app: FastAPI):
     """
     logger.info("Initializing FastAPI application...")
     try:
-        await mcp_client.connect()
+        tool_names = await mcp_client.verify_connection()
+        logger.info("MCP readiness check passed. Tools: %s", ", ".join(tool_names))
     except Exception as e:
         logger.error("Failed to connect to MCP Server during startup: %s", e)
     
@@ -70,13 +71,23 @@ app.include_router(referral_router)
 app.include_router(chat_router)
 
 @app.get("/health", status_code=status.HTTP_200_OK)
-async def health_check() -> Dict[str, str]:
+async def health_check() -> Dict[str, Any]:
     """
-    Health check endpoint returning application health and MCP server connection status.
+    Health check endpoint that verifies the live MCP session when needed.
     """
+    mcp_error = None
+    if not mcp_client.is_connected():
+        try:
+            await mcp_client.verify_connection()
+        except Exception as exc:
+            mcp_error = str(exc)
+
     mcp_status = "connected" if mcp_client.is_connected() else "disconnected"
     logger.debug("Health check requested. MCP status: %s", mcp_status)
-    return {
+    response = {
         "status": "healthy",
         "mcp": mcp_status
     }
+    if mcp_error:
+        response["mcp_error"] = mcp_error
+    return response

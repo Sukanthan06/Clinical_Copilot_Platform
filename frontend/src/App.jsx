@@ -9,6 +9,8 @@ import Chat from "./pages/Chat.jsx";
 import Trials from "./pages/Trials.jsx";
 import Referral from "./pages/Referral.jsx";
 
+import ExtractedContent from "./pages/ExtractedContent.jsx";
+
 function App() {
   return (
     <Routes>
@@ -18,6 +20,7 @@ function App() {
       <Route element={<DashboardLayout />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/upload" element={<Upload />} />
+        <Route path="/extracted-content" element={<ExtractedContent />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/timeline" element={<Timeline />} />
         <Route path="/chat" element={<Chat />} />

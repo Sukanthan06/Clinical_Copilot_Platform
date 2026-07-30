@@ -1,9 +1,10 @@
 import httpx
+from backend.config import settings
 from typing import List, Dict, Any
 
 class Retriever:
-    def __init__(self, base_url: str = "http://127.0.0.1:8000"):
-        self.base_url = base_url
+    def __init__(self, base_url: str | None = None):
+        self.base_url = (base_url or settings.INTERNAL_API_BASE_URL or f"http://{settings.HOST}:{settings.PORT}").rstrip("/")
 
     async def get_patient_profile(self, patient_id: str) -> Dict[str, Any]:
         """Queries local backend API to retrieve unified patient profile details."""

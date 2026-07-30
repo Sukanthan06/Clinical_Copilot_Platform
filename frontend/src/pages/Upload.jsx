@@ -10,6 +10,7 @@ function Upload() {
   const [supportedFormats, setSupportedFormats] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [reportType, setReportType] = useState("");
 
   useEffect(() => {
     getUploadedFiles().then((res) => {
@@ -20,8 +21,10 @@ function Upload() {
 
   async function handleFilesSelected(selected) {
     setIsUploading(true);
-    const uploaded = await Promise.all(selected.map((file) => uploadMedicalReport(file)));
-    setFiles((prev) => [...prev, ...uploaded.map((res) => res.file)]);
+    const uploaded = await Promise.all(selected.map((file) => uploadMedicalReport(file, reportType)));
+    const failed = uploaded.find((result) => !result.success);
+    if (failed) alert(failed.error || "One or more uploads failed.");
+    setFiles((prev) => [...prev, ...uploaded.filter((res) => res.success).map((res) => res.file)]);
     setIsUploading(false);
   }
 
@@ -37,8 +40,8 @@ function Upload() {
       for (const file of files) {
         await extractPatientInformation(file.id);
       }
-      // Navigate to patient profile page where the extracted data will render
-      navigate("/profile");
+      // Navigate to Extracted Content page where the extracted LLM data will render
+      navigate("/extracted-content");
     } catch (err) {
       console.error("Processing failed:", err);
       alert("Failed to process: " + (err.message || err));
@@ -60,7 +63,7 @@ function Upload() {
         </p>
       </div>
 
-      <UploadBox onFilesSelected={handleFilesSelected} supportedFormats={supportedFormats} />
+      <UploadBox onFilesSelected={handleFilesSelected} supportedFormats={supportedFormats} reportType={reportType} onReportTypeChange={setReportType} />
 
       <div className="mt-8">
         <div className="mb-4 flex items-center justify-between">

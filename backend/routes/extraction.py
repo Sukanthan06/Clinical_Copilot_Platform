@@ -51,6 +51,8 @@ async def extract_information(
     
     # Extract any nested profile if present, else empty dictionary
     profile = result.get("patientProfile") or result.get("patient_profile") or {}
+    extracted_text = result.get("extractedText") or result.get("extracted_text") or ""
+    extracted_info = result.get("extractedMedicalInfo") or result.get("extracted_medical_info") or result.get("extractedInfo") or {}
 
     response = ExtractResponse(
         success=success,
@@ -63,7 +65,10 @@ async def extract_information(
         extractionQuality=extraction_quality,
         message=message,
         patientProfile=profile,
-        patient_profile=profile
+        patient_profile=profile,
+        extractedText=extracted_text,
+        extractedMedicalInfo=extracted_info,
+        extracted_medical_info=extracted_info
     )
     
     print("==========================================")

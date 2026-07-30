@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { HiOutlineCloudArrowUp } from "react-icons/hi2";
 
-function UploadBox({ onFilesSelected, supportedFormats = [] }) {
+function UploadBox({ onFilesSelected, supportedFormats = [], reportType, onReportTypeChange }) {
   const inputRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -42,7 +42,19 @@ function UploadBox({ onFilesSelected, supportedFormats = [] }) {
         details automatically.
       </p>
 
-      <button type="button" onClick={() => inputRef.current?.click()} className="btn-primary mt-6">
+      <label className="mt-5 w-full max-w-sm text-left text-sm font-medium text-ink-700">
+        Report type
+        <select required value={reportType} onChange={(event) => onReportTypeChange(event.target.value)} className="mt-1 block w-full rounded-lg border border-mist-300 bg-white px-3 py-2 text-sm">
+          <option value="">Select a report type</option>
+          <option value="Discharge Summary">Discharge Summary</option>
+          <option value="Blood Report">Blood Report</option>
+          <option value="Radiology">Radiology</option>
+          <option value="Clinical Notes">Clinical Notes</option>
+          <option value="Other">Other</option>
+        </select>
+      </label>
+
+      <button type="button" disabled={!reportType} onClick={() => inputRef.current?.click()} className="btn-primary mt-6">
         Browse Files
       </button>
       <input

@@ -9,3 +9,5 @@ class TrialResponse(BaseModel):
     llmEvaluated: Optional[bool] = None
     llmEngine: Optional[str] = None
     trials: List[Dict[str, Any]]
+
+    model_config = {"extra": "allow"}
